@@ -3,8 +3,9 @@ URL parser from link
 
 # Usage
 ```
-parserURL <URL> [--insecure]
+parserURL <URL> <outputFileName> [--insecure]
 ```
 ```
---insecure - Disable SSL
+<outputFileName> - Name of output file without extension
+--insecure       - Disable SSL
 ```
