@@ -10,27 +10,28 @@
 #define isHTTP strstr(url, "http://") != NULL
 #define isHTTPS strstr(url, "https://") != NULL
 #define is2Slash strstr(url, "//") != NULL
-#define isInsecure strstr(argv[2], "--insecure") != NULL
+#define isInsecure strstr(argv[3], "--insecure") != NULL
 
-void run(char * url, long insecure);
-void parse(char * url, char * buffer); // Метод для парсинга ссылок
+void run(char * url, char * filename, long insecure);
+void parse(char * url, char * filename, char * buffer); // Метод для парсинга ссылок
 size_t getDist(char * p1, char * p2); // Разница между 2 указателями
 
 int main(int argc, char * argv[]) {
-	if (argc == 2)
-		run(argv[1], 1);
-	else if (argc == 3 && isInsecure)
-		run(argv[1], 0);
+	if (argc == 3)
+		run(argv[1], argv[2], 1);
+	else if (argc == 4 && isInsecure)
+		run(argv[1], argv[2], 0);
 	else {
-		printf_s("USAGE: parserURL <URL> [--insecure]\n");
-		printf_s("--insecure - Disable SSL\n");
+		printf_s("USAGE: parserURL <URL> <outputFileName> [--insecure]\n");
+		printf_s("<outputFileName> - Name of output file without extension\n");
+		printf_s("--insecure       - Disable SSL\n");
 		printf_s("Press any key to exit...\n");
 	}
 	_getch();
 	return 0;
 }
 
-void run(char * url, long insecure) {
+void run(char * url, char * filename, long insecure) {
 	CURL * curl;
 	CURLcode res;
 	curl = curl_easy_init();
@@ -50,18 +51,19 @@ void run(char * url, long insecure) {
 		curl_easy_cleanup(curl);
 
 		html = s.ptr;
-		parse(url, html);
+		parse(url, filename, html);
 		free(html); // Высвобождаем память
 	}
 	printf("%s\nPress any key to exit...\n", curl_easy_strerror(res));
 }
 
-void parse(char * url, char * buffer) {
+void parse(char * url, char * filename, char * buffer) {
 	char * begin = buffer; // Тут будет указатель на начало ссылки
 	char * end = NULL; // Тут указатель на конец
 	int total = 0; // Количество ссылок
 	FILE *fp;
-	fopen_s(&fp, "parsed.txt", "w"); // Создать файл вывода
+	strcat(filename, ".txt");
+	fopen_s(&fp, filename, "w"); // Создать файл вывода
 	if (fp == NULL) { // Проверить что файл создался
 		printf_s("Can't create output file!\n");
 		exit(1);
@@ -78,7 +80,7 @@ void parse(char * url, char * buffer) {
 			strncpy(_url, begin, URILength); // Скопировать URILength
 											// символов начиная с begin
 											// в url
-			_url[URILength - 1] = '\0'; // Добавляем символ конца
+			_url[URILength] = '\0'; // Добавляем символ конца
 			fprintf_s(fp, "%4d. %s%s%s\n", total + 1, // Вывод в файл
 				(isHTTP || isHTTPS || is2Slash ? "" : url),
 				(strstr(_url, "#") != NULL ? "/" : ""), _url);
@@ -89,7 +91,7 @@ void parse(char * url, char * buffer) {
 		begin = end; // Меняем начало на конец
 	}
 	fclose(fp); // Закрыть файл
-	printf_s("%d URLs written to file 'parsed.txt' successful\n", total);
+	printf_s("%d URLs written to file '%s' successful\n", total, filename);
 	return;
 }
 
