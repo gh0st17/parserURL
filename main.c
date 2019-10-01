@@ -7,9 +7,9 @@
 #include "string.h"
 #include <curl.h>
 
-#define isHTTP strstr(url, "http://") != NULL
-#define isHTTPS strstr(url, "https://") != NULL
-#define is2Slash strstr(url, "//") != NULL
+#define isHTTP strstr(_url, "http://") != NULL
+#define isHTTPS strstr(_url, "https://") != NULL
+#define is2Slash strstr(_url, "//") != NULL
 #define isInsecure strstr(argv[3], "--insecure") != NULL
 
 void run(char * url, char * filename, long insecure);
