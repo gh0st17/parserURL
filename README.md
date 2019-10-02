@@ -5,6 +5,7 @@ URL parser from link
 ```
 parserURL <URL> <outputFileName> [--insecure]
 ```
+# Description
 ```
 <outputFileName> - Name of output file without extension
 --insecure       - Disable SSL
