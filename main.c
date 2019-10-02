@@ -1,4 +1,4 @@
-﻿#define _CRT_SECURE_NO_WARNINGS // For strncpy
+﻿#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <conio.h>
@@ -13,8 +13,8 @@
 #define isInsecure strstr(argv[3], "--insecure") != NULL
 
 void run(char * url, char * filename, long insecure);
-void parse(char * url, char * filename, char * buffer); // Метод для парсинга ссылок
-size_t getDist(char * p1, char * p2); // Разница между 2 указателями
+void parse(char * url, char * filename, char * buffer);
+size_t getDist(char * p1, char * p2);
 
 int main(int argc, char * argv[]) {
 	if (argc == 3)
@@ -35,63 +35,69 @@ void run(char * url, char * filename, long insecure) {
 	CURL * curl;
 	CURLcode res;
 	curl = curl_easy_init();
-	char * html = NULL; // html
+	char * html = NULL;
 	struct string s;
 	if (curl) {
 		init_string(&s);
 		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, insecure);
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, insecure);
 		curl_easy_setopt(curl, CURLOPT_USERAGENT,
 			"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.6) Gecko/20070725 Firefox/2.0.0.6");
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
-
-		html = s.ptr;
-		parse(url, filename, html);
-		free(html); // Высвобождаем память
+		if (!res) {
+			html = s.ptr;
+			parse(url, filename, html);
+			free(html);
+		} else if (res == 60) {
+			printf_s("Try with '--insecure'\n");
+			printf_s("%s\n", curl_easy_strerror(res));
+		}
+		else
+			printf_s("%s\n", curl_easy_strerror(res));
 	}
-	printf("%s\nPress any key to exit...\n", curl_easy_strerror(res));
+	printf_s("Press any key to exit...\n");
 }
 
 void parse(char * url, char * filename, char * buffer) {
-	char * begin = buffer; // Тут будет указатель на начало ссылки
-	char * end = NULL; // Тут указатель на конец
-	int total = 0; // Количество ссылок
+	char * begin = buffer;
+	char * end = NULL;
+	int total = 0;
 	FILE *fp;
 	strcat(filename, ".txt");
-	fopen_s(&fp, filename, "w"); // Создать файл вывода
-	if (fp == NULL) { // Проверить что файл создался
+	fopen_s(&fp, filename, "w");
+	if (fp == NULL) {
 		printf_s("Can't create output file!\n");
 		exit(1);
 	}
 	while (1) {
-		begin = strstr(begin, "<a href=\""); // Поиск вхождения
-		if (begin == NULL) break; // Условие прерывания цикла
-		begin = begin + 9; // Смещаем на длину вхождения
-		end = strstr(begin, "\""); // Ищем конец
-		size_t URILength = getDist(begin, end); // Узнаем длину ссылки
-		if (end != NULL) { // Если конец найден
-			char * _url = (char*)malloc(URILength + 1); // Выделить память под ссылку
+		begin = strstr(begin, "<a href=\"");
+		if (begin == NULL) break;
+		begin = begin + 9;
+		end = strstr(begin, "\"");
+		size_t URILength = getDist(begin, end);
+		if (end != NULL) {
+			char * _url = (char*)malloc(URILength + 1);
 
-			strncpy(_url, begin, URILength); // Скопировать URILength
-											// символов начиная с begin
-											// в url
-			_url[URILength] = '\0'; // Добавляем символ конца
-			fprintf_s(fp, "%4d. %s%s%s\n", total + 1, // Вывод в файл
+			memmove_s(_url, URILength + 1, begin, URILength);
+			_url[URILength] = '\0';
+			fprintf_s(fp, "%4d. %s%s%s\n", total + 1,
 				(isHTTP || isHTTPS || is2Slash ? "" : url),
 				(strstr(_url, "#") != NULL ? "/" : ""), _url);
 
-			if (_url) free(_url); // Высвобождаем память
+			if (_url) free(_url);
 		}
-		total++; // Инкремент
-		begin = end; // Меняем начало на конец
+		total++;
+		begin = end;
 	}
-	fclose(fp); // Закрыть файл
-	printf_s("%d URLs written to file '%s' successful\n", total, filename);
+	fclose(fp);
+	if (total)
+		printf_s("%d URLs written to file '%s' successful\n", total, filename);
+	else printf_s("URLs not found\n");
 	return;
 }
 
